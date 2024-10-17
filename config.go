@@ -1,5 +1,5 @@
 package config
 
-func Config(key string) string {
+func Value(key string) string {
 	return config[key]
 }
