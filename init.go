@@ -10,6 +10,7 @@ import (
 )
 
 var config map[string]string
+var configName string
 
 func init() {
 	exePath, err := os.Executable()
@@ -17,8 +18,15 @@ func init() {
 		log.Println(err)
 		return
 	}
+	configName = ".config"
+
+	value := os.Getenv("CONFIG")
+	if value == "" {
+		configName = value
+	}
+
 	dir := filepath.Dir(exePath)
-	configPath := path.Join(dir, "/.config")
+	configPath := path.Join(dir, "/"+configName)
 	if _, err = os.Stat(configPath); err != nil {
 		dir, err = os.Getwd()
 		if err != nil {
@@ -58,11 +66,11 @@ func init() {
 }
 
 func find(dir string) (configPath string, err error) {
-	configPath = path.Join(dir + "/.config")
+	configPath = path.Join(dir + "/" + configName)
 	if _, err = os.Stat(configPath); err != nil {
 		dir = path.Join(dir, "..")
 		if dir == "/" {
-			err = fmt.Errorf(".config not found")
+			err = fmt.Errorf("%s not found", configName)
 			return
 		}
 		return find(dir)
