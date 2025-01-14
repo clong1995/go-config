@@ -21,7 +21,7 @@ func init() {
 	configName = ".config"
 
 	value := os.Getenv("CONFIG")
-	if value == "" {
+	if value != "" {
 		configName = value
 	}
 
