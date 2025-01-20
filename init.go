@@ -53,6 +53,9 @@ func init() {
 		if s == "" || strings.HasPrefix(s, "#") {
 			continue
 		}
+		if strings.HasSuffix(s, "=") {
+			s += " "
+		}
 		cell := strings.Split(s, " = ")
 		if len(cell) != 2 {
 			err = fmt.Errorf("config row error:%s", s)
@@ -60,8 +63,7 @@ func init() {
 			return
 		}
 		key := strings.Trim(cell[0], " ")
-		value := strings.Trim(cell[1], " ")
-		config[key] = value
+		config[key] = strings.Trim(cell[1], " ")
 	}
 }
 
