@@ -20,13 +20,13 @@ func init() {
 	}
 	configName = ".config"
 
-	value := os.Getenv("CONFIG")
-	if value != "" {
-		configName = value
+	envConfig := os.Getenv("CONFIG")
+	if envConfig != "" {
+		configName = envConfig
 	}
 
 	dir := filepath.Dir(exePath)
-	configPath := path.Join(dir, "/"+configName)
+	configPath := path.Join(dir, configName)
 	if _, err = os.Stat(configPath); err != nil {
 		dir, err = os.Getwd()
 		if err != nil {
