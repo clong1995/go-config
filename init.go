@@ -20,13 +20,13 @@ func init() {
 	}
 	configName = ".config"
 
-	value := os.Getenv("CONFIG")
-	if value != "" {
-		configName = value
+	envConfig := os.Getenv("CONFIG")
+	if envConfig != "" {
+		configName = envConfig
 	}
 
 	dir := filepath.Dir(exePath)
-	configPath := path.Join(dir, "/"+configName)
+	configPath := path.Join(dir, configName)
 	if _, err = os.Stat(configPath); err != nil {
 		dir, err = os.Getwd()
 		if err != nil {
@@ -68,14 +68,18 @@ func init() {
 }
 
 func find(dir string) (configPath string, err error) {
-	configPath = path.Join(dir + "/" + configName)
-	if _, err = os.Stat(configPath); err != nil {
-		dir = path.Join(dir, "..")
-		if dir == "/" {
-			err = fmt.Errorf("%s not found", configName)
+	for {
+		configPath = path.Join(dir, configName)
+		if _, err = os.Stat(configPath); err == nil {
 			return
 		}
-		return find(dir)
+
+		dir = filepath.Dir(dir)
+		if dir == "/" {
+			break
+		}
 	}
+	err = fmt.Errorf("%s not found", configName)
+	log.Println(err)
 	return
 }
