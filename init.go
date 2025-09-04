@@ -47,15 +47,22 @@ func init() {
 	}
 
 	str := strings.ReplaceAll(string(data), "\r\n", "\n")
+
+	//==数组成一行
+	str = strings.ReplaceAll(str, "[\n", "[")
+	str = strings.ReplaceAll(str, "\n]", "]")
+	str = strings.ReplaceAll(str, ",\n", ",")
+	str = strings.ReplaceAll(str, "    ", "")
+	//==
+
 	row := strings.Split(str, "\n")
 	config = make(map[string]string)
+
 	for _, s := range row {
 		if s == "" || strings.HasPrefix(s, "#") {
 			continue
 		}
-		if strings.HasSuffix(s, "=") {
-			s += " "
-		}
+
 		cell := strings.Split(s, " = ")
 		if len(cell) != 2 {
 			err = fmt.Errorf("config row error:%s", s)
@@ -63,7 +70,13 @@ func init() {
 			return
 		}
 		key := strings.Trim(cell[0], " ")
-		config[key] = strings.Trim(cell[1], " ")
+		value := strings.Trim(cell[1], " ")
+
+		if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
+			value = strings.Trim(value, "[]")
+		}
+
+		config[key] = value
 	}
 }
 

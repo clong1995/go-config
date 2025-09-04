@@ -3,24 +3,20 @@ package config
 import "testing"
 
 func TestConfig(t *testing.T) {
-	type args struct {
-		key string
-	}
 	tests := []struct {
 		name string
-		args args
 	}{
 		{
 			name: "测试读取配置文件",
-			args: args{
-				key: "MACHINE ID",
-			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Value(tt.args.key)
-			t.Logf("Config() = %v", got)
+			got1 := Value("MACHINE ID")
+			got2 := Value("DATASOURCE")
+			got3 := Value("ARR")
+			got4 := Value("KEY")
+			t.Logf("Config() = \n%v\n%v\n%v\n%v", got1, got2, got3, got4)
 		})
 	}
 }
