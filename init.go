@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -10,39 +9,42 @@ import (
 )
 
 var config map[string]string
-var configName string
+
+//var configName string
 
 func init() {
-	exePath, err := os.Executable()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	configName = ".config"
+
+	configName := ".config"
 
 	envConfig := os.Getenv("CONFIG")
 	if envConfig != "" {
 		configName = envConfig
 	}
 
+	exePath, err := os.Executable()
+	if err != nil {
+		printFatal(err)
+		return
+	}
+
 	dir := filepath.Dir(exePath)
 	configPath := path.Join(dir, configName)
-	if _, err = os.Stat(configPath); err != nil {
-		dir, err = os.Getwd()
-		if err != nil {
-			log.Println(err)
+	if _, err = os.Stat(configPath); err != nil { //程序目录不存在
+		//运行命令所在的目录，不一定是源码目录
+		if dir, err = os.Getwd(); err != nil {
+			printFatal(err)
 			return
 		}
-		configPath, err = find(dir)
-		if err != nil {
-			log.Fatalln(err)
+		configPath = path.Join(dir, configName)
+		if _, err = os.Stat(configPath); err != nil {
+			printFatal(err)
 			return
 		}
 	}
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		log.Fatalln(err)
+		printFatal(err)
 		return
 	}
 
@@ -66,7 +68,7 @@ func init() {
 		cell := strings.Split(s, " = ")
 		if len(cell) != 2 {
 			err = fmt.Errorf("config row error:%s", s)
-			log.Println(err)
+			printFatal(err)
 			return
 		}
 		key := strings.Trim(cell[0], " ")
@@ -78,21 +80,4 @@ func init() {
 
 		config[key] = value
 	}
-}
-
-func find(dir string) (configPath string, err error) {
-	for {
-		configPath = path.Join(dir, configName)
-		if _, err = os.Stat(configPath); err == nil {
-			return
-		}
-
-		dir = filepath.Dir(dir)
-		if dir == "/" {
-			break
-		}
-	}
-	err = fmt.Errorf("%s not found", configName)
-	log.Println(err)
-	return
 }
