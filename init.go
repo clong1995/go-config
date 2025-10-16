@@ -12,11 +12,10 @@ import (
 
 var config map[string]string
 
-//var configName string
+// var configName string
+var prefix = "config"
 
 func init() {
-
-	pcolor.SetPrefix("config")
 
 	configName := ".config"
 
@@ -27,7 +26,7 @@ func init() {
 
 	exePath, err := os.Executable()
 	if err != nil {
-		pcolor.PrintFatal(err.Error())
+		pcolor.PrintFatal(prefix, err.Error())
 		return
 	}
 
@@ -36,19 +35,19 @@ func init() {
 	if _, err = os.Stat(configPath); err != nil { //程序目录不存在
 		//运行命令所在的目录，不一定是源码目录
 		if dir, err = os.Getwd(); err != nil {
-			pcolor.PrintFatal(err.Error())
+			pcolor.PrintFatal(prefix, err.Error())
 			return
 		}
 		configPath = path.Join(dir, configName)
 		if _, err = os.Stat(configPath); err != nil {
-			pcolor.PrintFatal(err.Error())
+			pcolor.PrintFatal(prefix, err.Error())
 			return
 		}
 	}
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		pcolor.PrintFatal(err.Error())
+		pcolor.PrintFatal(prefix, err.Error())
 		return
 	}
 
@@ -72,7 +71,7 @@ func init() {
 		cell := strings.Split(s, " = ")
 		if len(cell) != 2 {
 			err = fmt.Errorf("config row error:%s", s)
-			pcolor.PrintFatal(err.Error())
+			pcolor.PrintFatal(prefix, err.Error())
 			return
 		}
 		key := strings.Trim(cell[0], " ")
