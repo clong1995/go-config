@@ -88,7 +88,6 @@ func find(dir, configName string) (configPath string, err error) {
 	configPath = path.Join(dir, configName)
 	if _, err = os.Stat(configPath); err != nil {
 		dir = path.Join(dir, "..")
-		dir = filepath.Dir(dir)
 		if dir == "/" {
 			err = fmt.Errorf("%s not found", configName)
 			return
