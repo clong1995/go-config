@@ -26,7 +26,7 @@ func Value(key string) (string, bool) {
 //
 // Deprecated: 为了更安全地检查键是否存在，推荐使用 Value 函数。
 // Get 函数无法区分“值为空字符串”和“键不存在”这两种情况。
-func Get(key string) string {
+/*func Get(key string) string {
 	val, _ := Value(key)
 	return val
-}
+}*/

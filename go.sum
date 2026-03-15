@@ -1,2 +1,4 @@
-github.com/clong1995/go-ansi-color v0.0.0-20260308193954-3b7bc61a2291 h1:E8fcrvx/l7zZKvPHosaOs4z5Go+0W+mKC3/yTNVkOhM=
-github.com/clong1995/go-ansi-color v0.0.0-20260308193954-3b7bc61a2291/go.mod h1:7ZGDhoNTkKxVwqejBrsexg1Sh1zKD402CAAg1f0gLRU=
+github.com/clong1995/go-ansi-color v0.0.0-20260314102151-cbbdfbe952a8 h1:q6HnwjA0cAwaNAIorlj2ojUjgdxzriRPYSOKB0+XF2Q=
+github.com/clong1995/go-ansi-color v0.0.0-20260314102151-cbbdfbe952a8/go.mod h1:7ZGDhoNTkKxVwqejBrsexg1Sh1zKD402CAAg1f0gLRU=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

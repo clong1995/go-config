@@ -2,11 +2,12 @@ package config
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/clong1995/go-ansi-color"
 )
@@ -16,7 +17,7 @@ var prefix = "config"
 func init() {
 	// 在包初始化时加载配置，如果失败则直接终止程序
 	if err := loadConfig(); err != nil {
-		pcolor.PrintFatal(prefix, "%v", err)
+		pcolor.PrintFatal(prefix, "%+v", err)
 	}
 }
 
@@ -32,14 +33,16 @@ func loadConfig() error {
 	// 查找配置文件的最终路径
 	configPath, err := findConfigPath(configName)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "find config path")
 	}
 
 	file, err := os.Open(configPath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to open config file")
 	}
-	defer file.Close()
+	defer func(f *os.File) {
+		_ = f.Close()
+	}(file)
 
 	// 加锁以保证并发安全
 	configMutex.Lock()
@@ -103,13 +106,13 @@ func loadConfig() error {
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("读取配置文件时出错: %v", err)
+	if err = scanner.Err(); err != nil {
+		return errors.Wrap(err, "scanner error")
 	}
 
 	// 检查是否有未闭合的多行数组
 	if arrayKey != "" {
-		return fmt.Errorf("配置文件结尾处，键 '%s' 的数组没有闭合", arrayKey)
+		return errors.Errorf("配置文件结尾处，键 '%s' 的数组没有闭合", arrayKey)
 	}
 
 	// 将解析出的配置赋值给全局变量
@@ -126,7 +129,7 @@ func findConfigPath(configName string) (string, error) {
 	if exePath, err := os.Executable(); err == nil {
 		exeDir := filepath.Dir(exePath)
 		configPath := path.Join(exeDir, configName)
-		if _, err := os.Stat(configPath); err == nil {
+		if _, err = os.Stat(configPath); err == nil {
 			return configPath, nil
 		}
 	}
@@ -136,7 +139,7 @@ func findConfigPath(configName string) (string, error) {
 		currentDir := wd
 		for {
 			configPath := path.Join(currentDir, configName)
-			if _, err := os.Stat(configPath); err == nil {
+			if _, err = os.Stat(configPath); err == nil {
 				return configPath, nil
 			}
 
@@ -148,5 +151,5 @@ func findConfigPath(configName string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("找不到配置文件 '%s'", configName)
+	return "", errors.Errorf("找不到配置文件 '%s'", configName)
 }

@@ -75,7 +75,7 @@ func TestValue(t *testing.T) {
 }
 
 // TestGet 是对 Get 函数的单元测试。
-func TestGet(t *testing.T) {
+/*func TestGet(t *testing.T) {
 	setupTestConfig()
 
 	tests := []struct {
@@ -102,4 +102,4 @@ func TestGet(t *testing.T) {
 			}
 		})
 	}
-}
+}*/
