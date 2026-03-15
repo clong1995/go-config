@@ -134,6 +134,8 @@ func loadConfig() error {
 
 	// 将解析出的新配置赋值给全局变量。
 	config = newConfig
+	// 清空所有旧的类型转换缓存，因为配置已更新。
+	cache.Clear()
 	return nil
 }
 
