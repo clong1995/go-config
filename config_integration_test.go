@@ -6,18 +6,19 @@ import (
 	"testing"
 )
 
-// TestLoadConfig_Integration_WithRealFormat 是一个集成测试。
-// 它的目的是验证从“查找文件”到“解析内容”再到“通过 Value 函数读取”的整个流程是否能正确工作。
-// 这个测试模拟了真实的文件结构和内容格式。
+// TestLoadConfig_Integration_WithRealFormat 是一个集成测试，用于验证配置加载的完整流程。
+// 它覆盖了从文件查找到内容解析，再到通过 `Value` 函数读取的整个过程，
+// 确保了各种基本格式（键值对、单行/多行数组）都能被正确处理。
 func TestLoadConfig_Integration_WithRealFormat(t *testing.T) {
-	// 步骤 1: 在一个临时目录中创建一个虚拟的 .config 文件。
-	// 这样做可以避免测试依赖于项目中的真实配置文件，使测试更稳定。
+	// 步骤 1: 创建一个临时的 .config 文件。
+	// 使用 t.TempDir() 可以确保测试结束后临时文件被自动清理，
+	// 这使得测试完全独立，不依赖于外部环境。
 	tempDir := t.TempDir()
 	configContent := `
-# 设备id
+# 设备 ID，键包含空格
 MACHINE ID = 80
 
-# 多行数据源
+# 多行数组
 DATASOURCE = [
     account,
     access
@@ -26,7 +27,7 @@ DATASOURCE = [
 # 单行数组
 ARR = [aa,bb,cc]
 
-# 简单键值
+# 简单的键值对
 KEY = 123abc
 `
 	configPath := filepath.Join(tempDir, ".config")
@@ -34,28 +35,29 @@ KEY = 123abc
 		t.Fatalf("创建临时配置文件失败: %v", err)
 	}
 
-	// 步骤 2: 将当前工作目录切换到临时目录。
-	// 这是为了让 findConfigPath 函数能够找到我们刚刚创建的临时文件。
+	// 步骤 2: 切换当前工作目录到临时目录。
+	// 这是为了模拟真实场景，让 `findConfigPath` 能够成功找到我们创建的配置文件。
 	originalWD, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("获取当前工作目录失败: %v", err)
 	}
 	if err := os.Chdir(tempDir); err != nil {
-		t.Fatalf("切换工作目录失败: %v", err)
+		t.Fatalf("切换工作目录到临时目录失败: %v", err)
 	}
-	// 使用 defer 确保测试结束后能恢复原始的工作目录，避免影响其他测试。
+	// 使用 defer 语句确保测试执行完毕后，能够安全地恢复原始工作目录。
 	defer func() {
 		if err := os.Chdir(originalWD); err != nil {
-			t.Errorf("恢复工作目录失败: %v", err)
+			t.Errorf("恢复原始工作目录失败: %v", err)
 		}
 	}()
 
-	// 步骤 3: 手动触发配置加载流程，这相当于模拟了包初始化时的 init() 行为。
+	// 步骤 3: 手动调用 loadConfig()，模拟包初始化时的配置加载行为。
 	if err := loadConfig(); err != nil {
 		t.Fatalf("loadConfig() 执行失败: %v", err)
 	}
 
-	// 步骤 4: 断言（Assert），检查文件中的配置项是否被正确加载和解析。
+	// 步骤 4: 定义一系列测试用例，并进行断言。
+	// 验证从配置文件中读取的各项配置是否符合预期。
 	testCases := []struct {
 		name      string
 		key       string
@@ -82,12 +84,15 @@ KEY = 123abc
 	}
 }
 
-// TestLoadConfig_Integration_ComplexArrayFormat 用于测试更复杂的多行数组格式。
-// 这个测试验证了解析器是否能正确处理各种边缘情况，例如行尾逗号、元素周围的空格以及同一行内的多个元素。
+// TestLoadConfig_Integration_ComplexArrayFormat 用于专门测试对复杂格式多行数组的解析能力。
+// 这个测试验证了解析器是否能正确处理各种边缘情况，例如：
+// - 同一行内包含多个元素
+// - 元素前后存在多余的空格
+// - 行尾带有逗号
 func TestLoadConfig_Integration_ComplexArrayFormat(t *testing.T) {
 	tempDir := t.TempDir()
 	configContent := `
-# 复杂格式的多行数组
+# 包含复杂格式的多行数组
 COMPLEX_ARR = [
     item1, item2,  # 同一行有多个元素
     item3  ,       # 元素后有空格和逗号
@@ -108,6 +113,7 @@ COMPLEX_ARR = [
 		t.Fatalf("loadConfig() 执行失败: %v", err)
 	}
 
+	// 期望的结果是所有元素被正确拼接，并用单个逗号分隔。
 	wantValue := "item1,item2,item3,item4,item5"
 	gotValue, ok := Value("COMPLEX_ARR")
 
