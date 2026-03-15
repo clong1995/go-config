@@ -81,3 +81,40 @@ KEY = 123abc
 		})
 	}
 }
+
+// TestLoadConfig_Integration_ComplexArrayFormat 用于测试更复杂的多行数组格式。
+// 这个测试验证了解析器是否能正确处理各种边缘情况，例如行尾逗号、元素周围的空格以及同一行内的多个元素。
+func TestLoadConfig_Integration_ComplexArrayFormat(t *testing.T) {
+	tempDir := t.TempDir()
+	configContent := `
+# 复杂格式的多行数组
+COMPLEX_ARR = [
+    item1, item2,  # 同一行有多个元素
+    item3  ,       # 元素后有空格和逗号
+      item4,       # 元素前有空格
+    item5          # 最后一个元素，没有逗号
+]
+`
+	configPath := filepath.Join(tempDir, ".config")
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("创建临时配置文件失败: %v", err)
+	}
+
+	originalWD, _ := os.Getwd()
+	_ = os.Chdir(tempDir)
+	defer func() { _ = os.Chdir(originalWD) }()
+
+	if err := loadConfig(); err != nil {
+		t.Fatalf("loadConfig() 执行失败: %v", err)
+	}
+
+	wantValue := "item1,item2,item3,item4,item5"
+	gotValue, ok := Value("COMPLEX_ARR")
+
+	if !ok {
+		t.Fatalf("期望找到键 'COMPLEX_ARR'，但未找到")
+	}
+	if gotValue != wantValue {
+		t.Errorf("对于复杂数组，Value() 的值 = %q, 期望是 %q", gotValue, wantValue)
+	}
+}

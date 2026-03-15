@@ -52,8 +52,8 @@ func loadConfig() error {
 	scanner := bufio.NewScanner(file)
 
 	// 用于处理多行数组的状态变量
-	var arrayKey string       // 当前正在解析的多行数组的键
-	var arrayContent []string // 临时存储多行数组的内容
+	var arrayKey string     // 当前正在解析的多行数组的键
+	var arrayContent string // 临时存储多行数组的内容，作为一个长字符串
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -62,14 +62,21 @@ func loadConfig() error {
 		// 如果 arrayKey 不为空，说明我们正处于一个多行数组的解析过程中
 		if arrayKey != "" {
 			if trimmedLine == "]" {
-				// 数组结束
-				newConfig[arrayKey] = strings.Join(arrayContent, ",")
+				// 数组结束，开始处理拼接好的字符串
+				var cleanedElements []string
+				elements := strings.Split(arrayContent, ",")
+				for _, el := range elements {
+					trimmedEl := strings.TrimSpace(el)
+					if trimmedEl != "" { // 避免因尾部逗号等产生空元素
+						cleanedElements = append(cleanedElements, trimmedEl)
+					}
+				}
+				newConfig[arrayKey] = strings.Join(cleanedElements, ",")
 				arrayKey = ""
-				arrayContent = nil
+				arrayContent = "" // 重置
 			} else if trimmedLine != "" && !strings.HasPrefix(trimmedLine, "#") {
-				// 数组中的一个元素
-				element := strings.TrimSuffix(trimmedLine, ",")
-				arrayContent = append(arrayContent, strings.TrimSpace(element))
+				// 将当前行内容拼接到 arrayContent 字符串
+				arrayContent += trimmedLine
 			}
 			continue // 继续处理下一行
 		}
