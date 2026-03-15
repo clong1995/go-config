@@ -95,12 +95,12 @@ func doConversion[T any](key string) (any, bool) {
 	switch any(zero).(type) {
 	case string:
 		return valStr, true
-	case int:
-		i, err := strconv.Atoi(valStr)
-		if err != nil {
-			return nil, false
-		}
-		return i, true
+	/*case int:
+	i, err := strconv.Atoi(valStr)
+	if err != nil {
+		return nil, false
+	}
+	return i, true*/
 	case int64:
 		i64, err := strconv.ParseInt(valStr, 10, 64)
 		if err != nil {
@@ -124,17 +124,17 @@ func doConversion[T any](key string) (any, bool) {
 			return []string{}, true
 		}
 		return strings.Split(valStr, ","), true
-	case []int:
-		parts := strings.Split(valStr, ",")
-		result := make([]int, 0, len(parts))
-		for _, p := range parts {
-			i, err := strconv.Atoi(strings.TrimSpace(p))
-			if err != nil {
-				return nil, false
-			}
-			result = append(result, i)
+	/*case []int:
+	parts := strings.Split(valStr, ",")
+	result := make([]int, 0, len(parts))
+	for _, p := range parts {
+		i, err := strconv.Atoi(strings.TrimSpace(p))
+		if err != nil {
+			return nil, false
 		}
-		return result, true
+		result = append(result, i)
+	}
+	return result, true*/
 	case []int64:
 		parts := strings.Split(valStr, ",")
 		result := make([]int64, 0, len(parts))
