@@ -17,20 +17,18 @@ var prefix = "config"
 // init 函数在包被导入时自动执行。
 // 它调用 loadConfig 来加载配置，如果加载过程中发生任何错误，
 // 程序将打印致命错误信息并立即终止。
-// 这种设计适用于那些强依赖配置才能启动的应用程序。
 func init() {
 	if err := loadConfig(); err != nil {
 		pcolor.PrintFatal(prefix, "%+v", err)
 	}
 }
 
-// loadConfig 是配置加载的核心函数。它负责查找、读取、解析配置文件，
-// 并将结果填充到全局的 `config` 变量中。
+// loadConfig 是配置加载的核心函数。它负责查找、读取、并解析配置文件。
 //
 // 解析逻辑支持以下格式：
 //   - 键值对 (例如: KEY = VALUE)
-//   - 单行数组 (例如: ARR = [item1, item2])
-//   - 多行数组 (例如: ARR = [ item1, item2 ])
+//   - 单行/多行数组 (例如: ARR = [item1, item2])
+//   - 单行/多行 Map (例如: MAP = {key1:val1; key2:val2})
 //
 // 函数会忽略空行和以 '#' 开头的注释行。
 func loadConfig() error {
@@ -54,41 +52,56 @@ func loadConfig() error {
 		_ = f.Close()
 	}(file)
 
-	// 在修改全局配置前加锁，以确保线程安全。
-	configMutex.Lock()
-	defer configMutex.Unlock()
-
 	newConfig := make(map[string]string)
 	scanner := bufio.NewScanner(file)
 
-	// 用于处理多行数组解析的状态变量。
-	var arrayKey string     // 存储当前正在解析的多行数组的键。
-	var arrayContent string // 将多行数组的所有行拼接成一个长字符串，以便后续处理。
+	// 用于处理多行块（数组或 map）的状态变量。
+	var multiLineKey string
+	var multiLineContent string
+	var inMultiLineBlock bool
+	var blockEndChar string // "]" 代表数组, "}" 代表 map
 
 	for scanner.Scan() {
 		line := scanner.Text()
 		trimmedLine := strings.TrimSpace(line)
 
-		// 如果 arrayKey 不为空，表示当前正处于一个多行数组的解析状态。
-		if arrayKey != "" {
-			if trimmedLine == "]" {
-				// 遇到数组结束符 ']'，开始处理拼接好的数组内容。
-				var cleanedElements []string
-				elements := strings.Split(arrayContent, ",")
-				for _, el := range elements {
-					trimmedEl := strings.TrimSpace(el)
-					if trimmedEl != "" { // 过滤掉因多余逗号产生的空元素。
-						cleanedElements = append(cleanedElements, trimmedEl)
+		// 如果处于多行块的解析状态中。
+		if inMultiLineBlock {
+			if trimmedLine == blockEndChar {
+				// 遇到块结束符，处理并存储内容。
+				var finalContent string
+				if blockEndChar == "]" { // 数组块
+					// 对于数组，将内容用逗号连接。
+					var cleanedElements []string
+					elements := strings.Split(multiLineContent, ",")
+					for _, el := range elements {
+						trimmedEl := strings.TrimSpace(el)
+						if trimmedEl != "" {
+							cleanedElements = append(cleanedElements, trimmedEl)
+						}
 					}
+					finalContent = strings.Join(cleanedElements, ",")
+				} else { // Map 块
+					// 对于 map，直接使用拼接好的内容。
+					finalContent = multiLineContent
 				}
-				newConfig[arrayKey] = strings.Join(cleanedElements, ",")
-				arrayKey = ""     // 重置状态，退出数组解析模式。
-				arrayContent = "" // 清空内容。
+				newConfig[multiLineKey] = finalContent
+				// 重置状态。
+				inMultiLineBlock = false
+				multiLineKey = ""
+				multiLineContent = ""
+				blockEndChar = ""
 			} else if trimmedLine != "" && !strings.HasPrefix(trimmedLine, "#") {
-				// 将非空、非注释的行内容拼接到 arrayContent 中。
-				arrayContent += trimmedLine
+				// 将非空、非注释的行内容拼接到 multiLineContent 中。
+				if blockEndChar == "}" {
+					// 对 map 使用分号作为条目分隔符，以增加健壮性。
+					multiLineContent += trimmedLine + ";"
+				} else {
+					// 对于数组追加逗号拼接，防止用户未在行尾加逗号导致元素粘连。
+					multiLineContent += trimmedLine + ","
+				}
 			}
-			continue // 继续扫描下一行。
+			continue
 		}
 
 		// 忽略空行和注释行。
@@ -99,26 +112,27 @@ func loadConfig() error {
 		// 解析 "key = value" 格式的键值对。
 		parts := strings.SplitN(trimmedLine, "=", 2)
 		if len(parts) != 2 {
-			continue // 如果行不包含 '='，则视为格式错误并跳过。
+			continue
 		}
 
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 
+		// 检查值的格式，以确定如何处理。
 		if value == "[" {
-			// 侦测到多行数组的开始。
-			arrayKey = key
-		} else if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
-			// 解析单行数组，例如: ARR = [aa,bb,cc]
-			content := strings.Trim(value, "[]")
-			elements := strings.Split(content, ",")
-			var cleanedElements []string
-			for _, el := range elements {
-				cleanedElements = append(cleanedElements, strings.TrimSpace(el))
-			}
-			newConfig[key] = strings.Join(cleanedElements, ",")
+			inMultiLineBlock = true
+			multiLineKey = key
+			blockEndChar = "]"
+		} else if value == "{" {
+			inMultiLineBlock = true
+			multiLineKey = key
+			blockEndChar = "}"
+		} else if (strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]")) ||
+			(strings.HasPrefix(value, "{") && strings.HasSuffix(value, "}")) {
+			// 对于单行数组或 map，直接剥离两端的括号，避免使用 strings.Trim 误删内部字符。
+			newConfig[key] = value[1 : len(value)-1]
 		} else {
-			// 解析简单的键值对。
+			// 普通的键值对。
 			newConfig[key] = value
 		}
 	}
@@ -127,30 +141,28 @@ func loadConfig() error {
 		return errors.Wrap(err, "读取文件时发生错误")
 	}
 
-	// 检查在文件末尾是否存在未闭合的多行数组。
-	if arrayKey != "" {
-		return errors.Errorf("配置文件在结尾处，键 '%s' 的数组没有闭合", arrayKey)
+	// 检查在文件末尾是否存在未闭合的块。
+	if inMultiLineBlock {
+		return errors.Errorf("配置文件在结尾处，键 '%s' 的块没有闭合", multiLineKey)
 	}
 
+	// 在修改全局配置前加锁，以确保线程安全。
+	configMutex.Lock()
 	// 将解析出的新配置赋值给全局变量。
 	config = newConfig
+	configMutex.Unlock()
+
 	// 清空所有旧的类型转换缓存，因为配置已更新。
 	cache.Clear()
 	return nil
 }
 
 // findConfigPath 智能地查找配置文件的路径。
-//
-// 查找顺序如下:
-//  1. 首先，在程序可执行文件所在的目录中查找。
-//  2. 如果未找到，则从当前工作目录开始，向上逐级递归查找，直至文件系统的根目录。
-//
-// 如果在所有指定位置都找不到配置文件，将返回一个错误。
+// 查找顺序：1. 程序可执行文件目录。2. 当前工作目录及所有上层目录。
 func findConfigPath(configName string) (string, error) {
 	// 1. 检查可执行文件所在的目录。
 	if exePath, err := os.Executable(); err == nil {
-		exeDir := filepath.Dir(exePath)
-		configPath := path.Join(exeDir, configName)
+		configPath := path.Join(filepath.Dir(exePath), configName)
 		if _, err = os.Stat(configPath); err == nil {
 			return configPath, nil
 		}
@@ -164,9 +176,8 @@ func findConfigPath(configName string) (string, error) {
 			if _, err = os.Stat(configPath); err == nil {
 				return configPath, nil
 			}
-
 			parentDir := filepath.Dir(currentDir)
-			if parentDir == currentDir { // 如果到达根目录，则停止查找。
+			if parentDir == currentDir { // 到达根目录，停止查找。
 				break
 			}
 			currentDir = parentDir
