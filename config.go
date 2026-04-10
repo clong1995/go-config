@@ -173,15 +173,15 @@ func parseSlice[T any](valStr string, parser func(string) (T, error)) (any, bool
 }
 
 // parseMap 是一个泛型辅助函数，用于将特定格式的字符串解析为指定类型的 map。
-// 字符串格式为 "key1:val1;key2:val2"。
+// 字符串格式为 "key1:val1,key2:val2"。
 // 它接受一个字符串和一个 `parser` 函数，该函数负责将值的字符串部分转换为目标类型 T。
 func parseMap[T any](valStr string, parser func(string) (T, error)) (any, bool) {
 	if valStr == "" {
 		return map[string]T{}, true
 	}
 	result := make(map[string]T)
-	// 使用分号作为 map 条目之间的分隔符，以增加健壮性。
-	entries := strings.Split(valStr, ";")
+	// 使用逗号作为 map 条目之间的分隔符，与切片解析保持一致。
+	entries := strings.Split(valStr, ",")
 	for _, entry := range entries {
 		entry = strings.TrimSpace(entry)
 		if entry == "" {
